@@ -21,6 +21,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 
@@ -34,7 +35,9 @@ public class Team implements Serializable {
     private String city;
     private Collection<Player> players;
     private League league;
-    
+    private Collection<Match> homeMatches;
+    private Collection<Match> awayMatches;
+
     /** Creates a new instance of Team */
     public Team() {
     }
@@ -93,7 +96,25 @@ public class Team implements Serializable {
     public void setLeague(League league) {
         this.league = league;
     }
-    
+
+    @OneToMany(mappedBy = "homeTeam")
+    public Collection<Match> getHomeMatches() {
+        return homeMatches;
+    }
+
+    public void setHomeMatches(Collection<Match> homeMatches) {
+        this. homeMatches = homeMatches;
+    }
+
+    @OneToMany(mappedBy = "awayTeam")
+    public Collection<Match> getAwayMatches() {
+        return awayMatches;
+    }
+
+    public void setAwayMatches(Collection<Match> awayMatches) {
+        this.awayMatches = awayMatches;
+    }
+
     public void addPlayer(Player player) {
         this.getPlayers().add(player);
     }

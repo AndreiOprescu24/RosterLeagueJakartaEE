@@ -14,6 +14,7 @@ package org.rosterleague.ejb;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -442,6 +443,23 @@ public class RequestBean implements Request, Serializable {
         try {
             Team team = em.find(Team.class, teamId);
 
+            // Remove all matches where this team is home or away
+            CriteriaQuery<Match> cq = cb.createQuery(Match.class);
+            Root<Match> match = cq.from(Match.class);
+
+            Predicate isHomeTeam = cb.equal(match. get(Match_.homeTeam). get(Team_.id), teamId);
+            Predicate isAwayTeam = cb. equal(match.get(Match_.awayTeam).get(Team_.id), teamId);
+
+            cq.where(cb.or(isHomeTeam, isAwayTeam));
+            cq.select(match);
+
+            TypedQuery<Match> q = em.createQuery(cq);
+            List<Match> matches = q.getResultList();
+
+            for (Match m : matches) {
+                em.remove(m);
+            }
+
             Collection<Player> players = team.getPlayers();
             for (Player player : players) {
                 player.dropTeam(team);
@@ -511,7 +529,207 @@ public class RequestBean implements Request, Serializable {
     }
 
     @Override
+    public void createMatch(MatchDetails matchDetails, String homeTeamId, String awayTeamId, String leagueId) {
+        logger.info("createMatch");
+        try {
+            Team homeTeam = em.find(Team. class, homeTeamId);
+            Team awayTeam = em.find(Team.class, awayTeamId);
+            League league = em.find(League.class, leagueId);
+
+            Match match = new Match(homeTeam, awayTeam, league);
+            match.setHomeScore(matchDetails.getHomeScore());
+            match.setAwayScore(matchDetails. getAwayScore());
+
+            em.persist(match);
+        } catch (Exception ex) {
+            throw new EJBException(ex);
+        }
+    }
+
+    @Override
+    public void removeMatch(Long matchId) {
+        logger.info("removeMatch");
+        try {
+            Match match = em.find(Match.class, matchId);
+            em.remove(match);
+        } catch (Exception ex) {
+            throw new EJBException(ex);
+        }
+    }
+
+    @Override
+    public MatchDetails getMatch(Long matchId) {
+        logger. info("getMatch");
+        try {
+            Match match = em.find(Match. class, matchId);
+            return new MatchDetails(
+                    match.getId(),
+                    match. getHomeTeam().getName(),
+                    match.getAwayTeam().getName(),
+                    match.getHomeScore(),
+                    match. getAwayScore()
+            );
+        } catch (Exception ex) {
+            throw new EJBException(ex);
+        }
+    }
+
+    @Override
+    public List<MatchDetails> getMatchesOfTeam(String teamId) {
+        logger.info("getMatchesOfTeam");
+        List<MatchDetails> matchList = new ArrayList<>();
+
+        try {
+            CriteriaQuery<Match> cq = cb.createQuery(Match.class);
+            if (cq != null) {
+                Root<Match> match = cq.from(Match.class);
+
+                // Get matches where team is home OR away
+                Predicate isHomeTeam = cb.equal(match.get(Match_.homeTeam). get(Team_.id), teamId);
+                Predicate isAwayTeam = cb.equal(match.get(Match_.awayTeam). get(Team_.id), teamId);
+
+                cq.where(cb.or(isHomeTeam, isAwayTeam));
+                cq.select(match);
+
+                TypedQuery<Match> q = em.createQuery(cq);
+                List<Match> matches = q.getResultList();
+
+                for (Match m : matches) {
+                    matchList.add(new MatchDetails(
+                            m.getId(),
+                            m.getHomeTeam().getName(),
+                            m.getAwayTeam().getName(),
+                            m.getHomeScore(),
+                            m.getAwayScore()
+                    ));
+                }
+            }
+        } catch (Exception ex) {
+            throw new EJBException(ex);
+        }
+
+        return matchList;
+    }
+
+    @Override
+    public List<MatchDetails> getMatchesOfLeague(String leagueId) {
+        logger.info("getMatchesOfLeague");
+        List<MatchDetails> matchList = new ArrayList<>();
+
+        try {
+            CriteriaQuery<Match> cq = cb. createQuery(Match.class);
+            if (cq != null) {
+                Root<Match> match = cq.from(Match.class);
+
+                cq.where(cb.equal(match.get(Match_.league).get(League_.id), leagueId));
+                cq.select(match);
+
+                TypedQuery<Match> q = em.createQuery(cq);
+                List<Match> matches = q.getResultList();
+
+                for (Match m : matches) {
+                    matchList.add(new MatchDetails(
+                            m. getId(),
+                            m.getHomeTeam().getName(),
+                            m.getAwayTeam().getName(),
+                            m.getHomeScore(),
+                            m.getAwayScore()
+                    ));
+                }
+            }
+        } catch (Exception ex) {
+            throw new EJBException(ex);
+        }
+
+        return matchList;
+    }
+
+    @Override
+    public List<TeamDetails> getLeagueStandings(String leagueId) {
+        logger.info("getLeagueStandings");
+        List<TeamDetails> standings = new ArrayList<>();
+
+        try {
+            // Get all teams in the league
+            League league = em.find(League.class, leagueId);
+
+            for (Team team : league.getTeams()) {
+                int matchesPlayed = 0;
+                int points = 0;
+
+                // Query all matches for this team in this league
+                CriteriaQuery<Match> cq = cb.createQuery(Match.class);
+                Root<Match> match = cq.from(Match.class);
+
+                Predicate inLeague = cb. equal(match.get(Match_.league). get(League_.id), leagueId);
+                Predicate isHomeTeam = cb.equal(match. get(Match_.homeTeam).get(Team_.id), team.getId());
+                Predicate isAwayTeam = cb.equal(match. get(Match_.awayTeam).get(Team_.id), team.getId());
+                Predicate isTeamMatch = cb.or(isHomeTeam, isAwayTeam);
+
+                cq.where(cb.and(inLeague, isTeamMatch));
+                cq.select(match);
+
+                TypedQuery<Match> q = em.createQuery(cq);
+                List<Match> teamMatches = q.getResultList();
+
+                for (Match m : teamMatches) {
+                    // Only count played matches (both scores not null)
+                    if (m.getHomeScore() != null && m.getAwayScore() != null) {
+                        matchesPlayed++;
+
+                        // Calculate points for this team
+                        if (team.getId().equals(m.getHomeTeam().getId())) {
+                            // Team is home
+                            if (m.getHomeScore() > m.getAwayScore()) {
+                                points += 3; // Win
+                            } else if (m.getHomeScore().equals(m.getAwayScore())) {
+                                points += 1; // Draw
+                            }
+                        } else {
+                            // Team is away
+                            if (m.getAwayScore() > m.getHomeScore()) {
+                                points += 3; // Win
+                            } else if (m.getAwayScore().equals(m.getHomeScore())) {
+                                points += 1; // Draw
+                            }
+                        }
+                    }
+                }
+
+                standings.add(new TeamDetails(
+                        team.getId(),
+                        team.getName(),
+                        team.getCity(),
+                        matchesPlayed,
+                        points
+                ));
+            }
+
+            // Sort by points descending
+            Collections.sort(standings);
+
+        } catch (Exception ex) {
+            throw new EJBException(ex);
+        }
+
+        return standings;
+    }
+
+    @Override
+    public void updateMatchScore(Long matchId, int homeScore, int awayScore) {
+        logger. info("updateMatchScore");
+        try {
+            Match match = em.find(Match.class, matchId);
+            match.setHomeScore(homeScore);
+            match.setAwayScore(awayScore);
+        } catch (Exception ex) {
+            throw new EJBException(ex);
+        }
+    }
+
+    @Override
     public void clearAllEntities() {
+        em.createQuery("DELETE FROM Match").executeUpdate();
         em.createQuery("DELETE FROM Player").executeUpdate();
         em.createQuery("DELETE FROM Team").executeUpdate();
         em.createQuery("DELETE FROM League").executeUpdate();

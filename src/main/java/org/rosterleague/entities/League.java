@@ -31,7 +31,8 @@ public abstract class League implements Serializable {
     protected String name;
     protected String sport;
     protected Collection<Team> teams;
-        
+    protected Collection<Match> matches;
+
     @Id
     public String getId() {
         return id;
@@ -65,7 +66,16 @@ public abstract class League implements Serializable {
     public void setTeams(Collection<Team> teams) {
         this.teams = teams;
     }
-    
+
+    @OneToMany(cascade=CascadeType.ALL, mappedBy="league")
+    public Collection<Match> getMatches() {
+        return matches;
+    }
+
+    public void setMatches(Collection<Match> matches) {
+        this.matches = matches;
+    }
+
     public void addTeam(Team team) {
         this.getTeams().add(team);
     }
@@ -73,5 +83,12 @@ public abstract class League implements Serializable {
     public void dropTeam(Team team) {
         this.getTeams().remove(team);
     }
-    
+
+    public void addMatch(Match match) {
+        this.getMatches().add(match);
+    }
+
+    public void dropMatch(Match match) {
+        this.getMatches().remove(match);
+    }
 }

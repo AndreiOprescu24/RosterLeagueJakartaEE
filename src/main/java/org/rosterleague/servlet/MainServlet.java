@@ -2,14 +2,12 @@ package org.rosterleague.servlet;
 
 import java.io.*;
 import java.util.List;
+import java.util.PrimitiveIterator;
 
 import jakarta.inject.Inject;
 import jakarta.servlet.http.*;
 import jakarta.servlet.annotation.*;
-import org.rosterleague.common.LeagueDetails;
-import org.rosterleague.common.PlayerDetails;
-import org.rosterleague.common.Request;
-import org.rosterleague.common.TeamDetails;
+import org.rosterleague.common.*;
 
 @WebServlet(name = "mainServlet", value = "/")
 public class MainServlet extends HttpServlet {
@@ -27,6 +25,7 @@ public class MainServlet extends HttpServlet {
 
         getSomeInfo();
         getMoreInfo();
+        getMatchInfo();
         removeInfo();
     }
 
@@ -165,6 +164,63 @@ public class MainServlet extends HttpServlet {
             ejbRequest.addPlayer("P9", "T6");
             ejbRequest.addPlayer("P7", "T5");
 
+            // MATCHES - League L1 (Mountain - Soccer)
+            // Round 1
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Honey Bees", "Gophers", 2, 1),
+                    "T1", "T2", "L1");
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Crows", "Honey Bees", 0, 3),
+                    "T5", "T1", "L1");
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Gophers", "Crows", 2, 2),
+                    "T2", "T5", "L1");
+
+            // Round 2
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Gophers", "Honey Bees", 0, 0),
+                    "T2", "T1", "L1");
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Honey Bees", "Crows", 1, 0),
+                    "T1", "T5", "L1");
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Crows", "Gophers", 1, 3),
+                    "T5", "T2", "L1");
+
+            // MATCHES - League L2 (Valley - Basketball)
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Deer", "Trout", 88, 76),
+                    "T3", "T4", "L2");
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Trout", "Deer", 92, 85),
+                    "T4", "T3", "L2");
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Deer", "Trout", 101, 99),
+                    "T3", "T4", "L2");
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Trout", "Deer", 78, 78),
+                    "T4", "T3", "L2");
+
+            // MATCHES - League L3 (Foothills - Soccer)
+            // Round 1
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Marmots", "Bobcats", 1, 1),
+                    "T6", "T7", "L3");
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Bobcats", "Beavers", 3, 1),
+                    "T7", "T8", "L3");
+
+            // Round 2
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Bobcats", "Marmots", 2, 1),
+                    "T7", "T6", "L3");
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Marmots", "Beavers", 0, 0),
+                    "T6", "T8", "L3");
+            ejbRequest.createMatch(
+                    new MatchDetails(null, "Beavers", "Bobcats", 1, 2),
+                    "T8", "T7", "L3");
+
         } catch (Exception ex) {
             printer.println("Caught an exception: " + ex.getClass() + " : " + ex.getMessage());
             ex.printStackTrace(printer);
@@ -294,14 +350,103 @@ public class MainServlet extends HttpServlet {
         }
     }
 
-    private void removeInfo() {
+    private void getMatchInfo() {
         try {
-            printer.println("Removing team T6. ");
-            ejbRequest.removeTeam("T6");
+            List<TeamDetails> standings;
+            List<MatchDetails> matchList;
+
+            printer.println("LEAGUE STANDINGS:");
+            printer.println("Mp - Number of matches played\nS  - Team score\n");
+
+            printer.println("Standings for league L1 (Mountain - Soccer):");
+            standings = ejbRequest.getLeagueStandings("L1");
+            printStandings(standings);
             printer.println();
 
-            printer.println("Removing player P24 ");
+            printer.println("Standings for league L2 (Valley - Basketball):");
+            standings = ejbRequest.getLeagueStandings("L2");
+            printStandings(standings);
+            printer.println();
+
+            printer.println("Standings for league L3 (Foothills - Soccer):");
+            standings = ejbRequest.getLeagueStandings("L3");
+            printStandings(standings);
+            printer.println();
+
+            printer.println("Standings for league L4 (Alpine - Snowboarding):");
+            standings = ejbRequest.getLeagueStandings("L4");
+            printStandings(standings);
+            printer.println();
+
+            printer.println("TEAM MATCHES:\n");
+
+            printer.println("All matches of team T1 (Honey Bees):");
+            matchList = ejbRequest.getMatchesOfTeam("T1");
+            printMatchList(matchList);
+            printer.println();
+
+            printer.println("All matches of team T2 (Gophers):");
+            matchList = ejbRequest.getMatchesOfTeam("T2");
+            printMatchList(matchList);
+            printer.println();
+
+            printer.println("All matches of team T3 (Deer):");
+            matchList = ejbRequest.getMatchesOfTeam("T3");
+            printMatchList(matchList);
+            printer.println();
+
+            printer.println("All matches of team T7 (Bobcats):");
+            matchList = ejbRequest.getMatchesOfTeam("T7");
+            printMatchList(matchList);
+            printer.println();
+
+            printer.println("All matches of team T9 (Penguins):");
+            matchList = ejbRequest.getMatchesOfTeam("T9");
+            printMatchList(matchList);
+            printer.println();
+
+        } catch (Exception ex) {
+            printer.println("Caught an exception: " + ex.getClass() + " : " + ex.getMessage());
+            ex.printStackTrace(printer);
+        }
+    }
+
+    private void printStandings(List<TeamDetails> standings) {
+        if (standings == null || standings.isEmpty()) {
+            printer.println("  No standings available.");
+            return;
+        }
+
+        int rank = 1;
+        for (TeamDetails team : standings) {
+            printer.println(rank + ". "
+                    + team.getName() + " <Mp-"
+                    + team.getMatchesPlayed() + "> <S-"
+                    + team.getPoints() + ">");
+            rank++;
+        }
+    }
+
+    private void printMatchList(List<MatchDetails> matches) {
+        if (matches == null || matches.isEmpty()) {
+            printer.println("  No matches found.");
+            return;
+        }
+        int nr=1;
+        for (MatchDetails match : matches) {
+            printer.print(nr++ + ". ");
+            printer.println(match);
+        }
+    }
+
+    private void removeInfo() {
+        try {
+            ejbRequest.removeTeam("T6");
+            printer.println("Removing team T6. ");
+            printer.println();
+
             ejbRequest.removePlayer("P24");
+            printer.println("Removing player P24 ");
             printer.println();
 
         } catch (Exception ex) {

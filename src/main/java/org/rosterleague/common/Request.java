@@ -64,4 +64,18 @@ public interface Request {
     void removeTeam(String teamId);
 
     void clearAllEntities();
+
+    void createMatch(MatchDetails matchDetails, String homeTeamId, String awayTeamId, String leagueId);
+
+    void removeMatch(Long matchId);
+
+    MatchDetails getMatch(Long matchId);
+
+    List<MatchDetails> getMatchesOfTeam(String teamId);
+
+    List<MatchDetails> getMatchesOfLeague(String leagueId);
+
+    List<TeamDetails> getLeagueStandings(String leagueId);
+
+    void updateMatchScore(Long matchId, int homeScore, int awayScore);
 }
